@@ -3,15 +3,17 @@ const ctx = canvas.getContext('2d');
 
 let drawing = false;
 let currentTool = 'pencil';
-let paths = []; // Stores all drawn paths
+let paths = []; 
 let currentPath = null;
 let redoStack = [];
 let showGraph = false;
 let backgroundImage = null;
 
-// Settings
+// UI Elements
 const sColor = document.getElementById('strokeColor');
 const fColor = document.getElementById('fillColor');
+const modal = document.getElementById('xmlModal');
+const xmlBox = document.getElementById('xmlCodeBox');
 
 // Toolbar Selection
 document.querySelectorAll('.tool').forEach(btn => {
@@ -25,6 +27,8 @@ document.querySelectorAll('.tool').forEach(btn => {
 // Image Upload Logic (Tracing mode)
 document.getElementById('bgImageBtn').addEventListener('click', () => document.getElementById('imageUpload').click());
 document.getElementById('imageUpload').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = function(event) {
         const img = new Image();
@@ -34,56 +38,83 @@ document.getElementById('imageUpload').addEventListener('change', function(e) {
         }
         img.src = event.target.result;
     }
-    reader.readAsDataURL(e.target.files[0]);
+    reader.readAsDataURL(file);
 });
 
-// Drawing Logic
-canvas.addEventListener('mousedown', (e) => {
-    drawing = true;
+// Helper function: Get precise coordinates for both PC (Mouse) and Mobile (Touch)
+function getCoordinates(e) {
     const rect = canvas.getBoundingClientRect();
-    const x = parseFloat((e.clientX - rect.left).toFixed(2));
-    const y = parseFloat((e.clientY - rect.top).toFixed(2));
+    let clientX = e.clientX;
+    let clientY = e.clientY;
+
+    if (e.touches && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+    }
+
+    return {
+        x: parseFloat(((clientX - rect.left) * (canvas.width / rect.width)).toFixed(2)),
+        y: parseFloat(((clientY - rect.top) * (canvas.height / rect.height)).toFixed(2))
+    };
+}
+
+// Drawing Functions
+function startPosition(e) {
+    e.preventDefault(); // Stop mobile screen scrolling
+    drawing = true;
+    const pos = getCoordinates(e);
     
     currentPath = {
         tool: currentTool,
         stroke: sColor.value,
         fill: fColor.value === "#000000" ? "#00000000" : fColor.value,
-        points: [{x, y}]
+        points: [{x: pos.x, y: pos.y}]
     };
-    redoStack = []; // Clear redo stack on new action
-});
+    redoStack = []; 
+}
 
-canvas.addEventListener('mousemove', (e) => {
+function draw(e) {
     if (!drawing) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = parseFloat((e.clientX - rect.left).toFixed(2));
-    const y = parseFloat((e.clientY - rect.top).toFixed(2));
+    e.preventDefault(); // Stop mobile screen scrolling
+    const pos = getCoordinates(e);
 
     if (currentTool === 'pencil') {
-        currentPath.points.push({x, y});
+        currentPath.points.push({x: pos.x, y: pos.y});
     } else {
-        // For shapes, replace the last point to show live preview
-        currentPath.points[1] = {x, y}; 
+        // Shapes live preview update
+        currentPath.points[1] = {x: pos.x, y: pos.y}; 
     }
     redrawCanvas();
     drawTempPath(currentPath);
-});
+}
 
-canvas.addEventListener('mouseup', () => {
+function endPosition(e) {
+    e.preventDefault();
     if (drawing && currentPath) {
         paths.push(currentPath);
     }
     drawing = false;
     currentPath = null;
     redrawCanvas();
-});
+}
 
-// Canvas Redraw Logic
+// Mouse Events (PC)
+canvas.addEventListener('mousedown', startPosition);
+canvas.addEventListener('mousemove', draw);
+canvas.addEventListener('mouseup', endPosition);
+canvas.addEventListener('mouseout', endPosition);
+
+// Touch Events (Mobile) - passive: false allows e.preventDefault() to work
+canvas.addEventListener('touchstart', startPosition, { passive: false });
+canvas.addEventListener('touchmove', draw, { passive: false });
+canvas.addEventListener('touchend', endPosition);
+
+// Canvas Rendering
 function redrawCanvas() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
     if (backgroundImage) {
-        ctx.globalAlpha = 0.5; // Make image semi-transparent
+        ctx.globalAlpha = 0.5; // Trace mode transparency
         ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
         ctx.globalAlpha = 1.0;
     }
@@ -130,7 +161,7 @@ function drawGrid() {
     }
 }
 
-// Undo / Redo / Clear
+// Utility Buttons
 document.getElementById('undoBtn').addEventListener('click', () => {
     if (paths.length > 0) redoStack.push(paths.pop());
     redrawCanvas();
@@ -145,6 +176,7 @@ document.getElementById('clearBtn').addEventListener('click', () => {
     paths = [];
     redoStack = [];
     backgroundImage = null;
+    document.getElementById('imageUpload').value = ''; // Reset file input
     redrawCanvas();
 });
 
@@ -153,13 +185,10 @@ document.getElementById('graphBtn').addEventListener('click', () => {
     redrawCanvas();
 });
 
-// XML Generator Logic (THE CLEAN METHOD)
-const modal = document.getElementById('xmlModal');
-const xmlBox = document.getElementById('xmlCodeBox');
-
+// XML Generation Logic (CLEAN NO-HTML METHOD)
 function generateXMLCode() {
-    let w = document.getElementById('outWidth').value || 100;
-    let h = document.getElementById('outHeight').value || 100;
+    let w = document.getElementById('outWidth').value || 200;
+    let h = document.getElementById('outHeight').value || 200;
     
     let xml = `<?xml version="1.0" encoding="utf-8"?>\n`;
     xml += `<vector xmlns:android="http://schemas.android.com/apk/res/android"\n`;
@@ -171,9 +200,11 @@ function generateXMLCode() {
     paths.forEach((p, index) => {
         let pathData = "";
         if(p.tool === 'pencil' || p.tool === 'line') {
-            pathData += `M ${p.points[0].x},${p.points[0].y} `;
-            for(let i=1; i<p.points.length; i++) {
-                pathData += `L ${p.points[i].x},${p.points[i].y} `;
+            if(p.points.length > 1) {
+                pathData += `M ${p.points[0].x},${p.points[0].y} `;
+                for(let i=1; i<p.points.length; i++) {
+                    pathData += `L ${p.points[i].x},${p.points[i].y} `;
+                }
             }
         } else if (p.tool === 'rect' && p.points.length > 1) {
             let x1 = p.points[0].x, y1 = p.points[0].y;
@@ -181,16 +212,18 @@ function generateXMLCode() {
             pathData = `M ${x1},${y1} L ${x2},${y1} L ${x2},${y2} L ${x1},${y2} Z`;
         }
 
-        xml += `    \n`;
-        xml += `    <path\n`;
-        xml += `        android:fillColor="${p.fill}"\n`;
-        xml += `        android:strokeColor="${p.stroke}"\n`;
-        xml += `        android:strokeWidth="2"\n`;
-        xml += `        android:pathData="${pathData.trim()}" />\n\n`;
+        if(pathData.trim() !== "") {
+            xml += `    \n`;
+            xml += `    <path\n`;
+            xml += `        android:fillColor="${p.fill}"\n`;
+            xml += `        android:strokeColor="${p.stroke}"\n`;
+            xml += `        android:strokeWidth="2"\n`;
+            xml += `        android:pathData="${pathData.trim()}" />\n\n`;
+        }
     });
 
     xml += `</vector>`;
-    xmlBox.value = xml; // Set value of textarea (NO HTML TAGS WILL BE GENERATED)
+    xmlBox.value = xml; 
 }
 
 document.getElementById('generateBtn').addEventListener('click', () => {
@@ -204,10 +237,13 @@ document.getElementById('closeModalBtn').addEventListener('click', () => {
     modal.style.display = 'none';
 });
 
-// The Clean Copy Function
+// Copy logic
 document.getElementById('copyBtn').addEventListener('click', () => {
     xmlBox.select();
     navigator.clipboard.writeText(xmlBox.value).then(() => {
-        alert("CLEAN XML COPIED! Ready for Android Studio.");
-    }).catch(err => alert("Copy failed!"));
+        alert("Clean XML Copied! Ready to paste in Android Studio.");
+    }).catch(err => {
+        alert("Copy failed. You can select the text manually.");
+        console.error(err);
+    });
 });
