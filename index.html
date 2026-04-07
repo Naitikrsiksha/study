@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>VectorDraw Pro</title>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -24,9 +24,9 @@
 
     <div class="main-area">
         <div class="sidebar">
-            <button class="tool active" data-tool="pencil">✏️</button>
-            <button class="tool" data-tool="line">📏</button>
-            <button class="tool" data-tool="rect">🔲</button>
+            <button class="tool active" data-tool="pencil" title="Pencil">✏️</button>
+            <button class="tool" data-tool="line" title="Line">📏</button>
+            <button class="tool" data-tool="rect" title="Rectangle">🔲</button>
         </div>
         <div class="canvas-container" id="canvasContainer">
             <canvas id="drawingCanvas" width="800" height="600"></canvas>
