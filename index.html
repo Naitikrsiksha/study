@@ -1,238 +1,53 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dark Danger Zone</title>
-
-<style>
-*{margin:0;padding:0;box-sizing:border-box;}
-body{
-    font-family: Arial, sans-serif;
-    background: radial-gradient(circle, #000000 0%, #1a0000 100%);
-    min-height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    color:white;
-    overflow:hidden;
-}
-
-.container{
-    text-align:center;
-    padding:35px;
-    background:rgba(0,0,0,0.9);
-    border-radius:20px;
-    box-shadow:0 0 50px rgba(255,0,0,0.8);
-    max-width:600px;
-    width:90%;
-    animation:fadeIn .4s;
-}
-
-@keyframes fadeIn{
-    from{opacity:0;transform:scale(.85);}
-    to{opacity:1;transform:scale(1);}    
-}
-
-h1{
-    font-size:2.2em;
-    margin-bottom:20px;
-    color:#ff2a2a;
-    text-shadow:0 0 20px red;
-    animation:pulse 1.3s infinite;
-}
-
-@keyframes pulse{
-    0%,100%{transform:scale(1);}
-    50%{transform:scale(1.08);}    
-}
-
-p{font-size:1.3em;margin-bottom:20px;}
-
-button{
-    padding:14px 35px;
-    font-size:1.2em;
-    margin:10px;
-    border:none;
-    border-radius:12px;
-    cursor:pointer;
-    font-weight:bold;
-    transition:.25s;
-}
-
-.enter-btn{background:linear-gradient(135deg,#ff0000,#9b0000);color:white;}
-.gender-btn{background:linear-gradient(135deg,#00c853,#009624);color:white;}
-.yes-btn{background:linear-gradient(135deg,#ff9100,#ff6d00);color:white;}
-.no-btn{background:linear-gradient(135deg,#777,#444);color:white;}
-
-button:hover{transform:scale(1.12);}
-
-input{
-    padding:14px;
-    font-size:1.1em;
-    margin:12px 0;
-    width:100%;
-    max-width:380px;
-    border:2px solid red;
-    border-radius:10px;
-    background:rgba(255,255,255,.1);
-    color:white;
-    text-align:center;
-}
-
-.hidden{display:none;}
-
-.emoji{font-size:4em;animation:shake .5s infinite;}
-
-@keyframes shake{
-    0%{transform:translateX(0)}
-    25%{transform:translateX(-5px)}
-    50%{transform:translateX(5px)}
-    75%{transform:translateX(-5px)}
-    100%{transform:translateX(0)}
-}
-
-.final-message{font-size:1.4em;color:#ffee58;line-height:1.8;}
-
-.glitch{animation:glitch 0.15s infinite;}
-
-@keyframes glitch{
-    0%{transform:translate(0)}
-    20%{transform:translate(-2px,2px)}
-    40%{transform:translate(2px,-2px)}
-    60%{transform:translate(-2px,1px)}
-    80%{transform:translate(2px,1px)}
-    100%{transform:translate(0)}
-}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VectorDraw Pro</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+    <div class="topbar">
+        <div class="logo">🎨 VectorDraw Pro</div>
+        <div class="controls">
+            <input type="color" id="strokeColor" value="#58a6ff" title="Stroke Color">
+            <input type="color" id="fillColor" value="#000000" title="Fill Color (Black = None)">
+            <button id="undoBtn">↩ Undo</button>
+            <button id="redoBtn">↪ Redo</button>
+            <button id="graphBtn">📈 Toggle Graph</button>
+            <button id="bgImageBtn">📷 Upload Image (Trace)</button>
+            <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+            <button id="clearBtn">🗑 Clear</button>
+            <button id="generateBtn" class="primary-btn">▶ Generate XML</button>
+        </div>
+    </div>
 
-<audio id="bgSound" loop preload="auto">
-    <source src="https://raw.githubusercontent.com/Naitikrsiksha/study/main/horror.mp3" type="audio/mpeg">
-</audio>
+    <div class="main-area">
+        <div class="sidebar">
+            <button class="tool active" data-tool="pencil">✏️</button>
+            <button class="tool" data-tool="line">📏</button>
+            <button class="tool" data-tool="rect">🔲</button>
+        </div>
+        <div class="canvas-container" id="canvasContainer">
+            <canvas id="drawingCanvas" width="800" height="600"></canvas>
+        </div>
+    </div>
 
-<div id="page1" class="container">
-    <h1> WARNING </h1>
-    <p>Best horror experience ke liye <b>phone ka volume FULL kar do</b> </p>
-    <button class="enter-btn" id="enterBtn">READY HU </button>
-</div>
+    <div id="xmlModal" class="modal">
+        <div class="modal-content">
+            <h3>Generated Android XML</h3>
+            <p style="font-size: 12px; color: #888;">Set your DP size. Viewport is fixed to 800x600.</p>
+            <div class="size-inputs">
+                <input type="number" id="outWidth" value="200" placeholder="Width (dp)">
+                <input type="number" id="outHeight" value="200" placeholder="Height (dp)">
+                <button id="updateXmlBtn">Update Size</button>
+            </div>
+            <textarea id="xmlCodeBox" readonly></textarea>
+            <button id="copyBtn" class="primary-btn">📋 Copy Clean Code</button>
+            <button id="closeModalBtn">Close</button>
+        </div>
+    </div>
 
-<div id="page2" class="container hidden">
-    <h1>Gender Select Karo</h1>
-    <button class="gender-btn" id="maleBtn">Ladka</button>
-    <button class="gender-btn" id="femaleBtn">Ladki</button>
-</div>
-
-<div id="page3" class="container hidden">
-    <h1 class="glitch"> SECURITY CHECK </h1>
-    <p>System tumhe scan kar raha hai...</p>
-    <button class="yes-btn" id="scanBtn">SCAN COMPLETE</button>
-</div>
-
-<div id="page4" class="container hidden">
-    <h1 class="glitch"> FINAL WARNING </h1>
-    <p>Ab bhi wapas ja sakte ho...</p>
-    <button class="yes-btn" id="continueBtn">AAGE JAO</button>
-    <button class="no-btn" id="noBtn">NAHI</button>
-</div>
-
-<div id="page5" class="container hidden">
-    <h1>Apna Naam Likho</h1>
-    <input id="nameInput" placeholder="Sirf alphabets allowed">
-    <br>
-    <button class="enter-btn" id="confirmBtn">CONFIRM</button>
-</div>
-
-<div id="page6" class="container hidden">
-    <h1 class="glitch"> DANGER ZONE </h1>
-    <p>System crash... bachna impossible...</p>
-    <button class="yes-btn" id="finalBtn">CONTINUE</button>
-</div>
-
-<div id="page7" class="container hidden">
-    <div class="emoji"></div>
-    <div class="emoji"></div>
-    <div class="final-message" id="finalMessage"></div>
-</div>
-
-<script>
-let userGender = '';
-const bgSound = document.getElementById('bgSound');
-
-function playHorrorSound(){
-    bgSound.volume = 1.0;
-    bgSound.loop = true;
-    bgSound.play().catch(()=>{});
-
-    if(navigator.vibrate){
-        navigator.vibrate([400,200,400,200,700]);
-    }
-}
-
-function showPage(n){
-    for(let i=1;i<=7;i++){
-        document.getElementById("page"+i).classList.add("hidden");
-    }
-    document.getElementById("page"+n).classList.remove("hidden");
-}
-
-document.getElementById('enterBtn').onclick = ()=>{
-    alert(" Volume FULL rakho ");
-    playHorrorSound();
-    showPage(2);
-}
-
-maleBtn.onclick = ()=>{userGender='male';showPage(3);}
-femaleBtn.onclick = ()=>{userGender='female';showPage(3);}
-scanBtn.onclick = ()=>{showPage(4);}
-continueBtn.onclick = ()=>{showPage(5);}
-
-noBtn.onmouseover = function(){
-    this.style.position='fixed';
-    this.style.left=Math.random()*(window.innerWidth-150)+'px';
-    this.style.top=Math.random()*(window.innerHeight-80)+'px';
-};
-
-confirmBtn.onclick = ()=>{
-    let name = nameInput.value.trim();
-
-    // Only alphabets + space
-    if(!/^[A-Za-z ]+$/.test(name)){
-        alert(" Sirf alphabets allowed hain! No numbers & no special characters ");
-        return;
-    }
-
-    // Remove spaces + lowercase
-    let clean = name.replace(/\s+/g,'').toLowerCase();
-
-    // Block NAITIK in ANY form
-    if(clean.includes("naitik")){
-        alert(" Ye naam yahan allowed nahi hai ");
-        return;
-    }
-
-    if(clean.length < 3){
-        alert(" Thoda proper naam likho!");
-        return;
-    }
-
-    showPage(6);
-}
-
-finalBtn.onclick = ()=>{
-    let n = nameInput.value.trim();
-    let msg = userGender==='male'
-    ? `${n} Aabe jaa bhai kuch padh le <br>Waise aaj kitna ghanta pade😁 <br>full time waste kar liya na🥱🤪<br>LOL `
-    : `${n}  padh bhi le kuch bahan!<br>Kyon nahi ho rahi padai <br>💡🧐<br>LOL `;
-
-    finalMessage.innerHTML = msg;
-    showPage(7);
-}
-</script>
-
+    <script src="script.js"></script>
 </body>
-
 </html>
-
