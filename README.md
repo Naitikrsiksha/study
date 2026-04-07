@@ -1,2 +1,0 @@
-# study
-padh le bhai 
